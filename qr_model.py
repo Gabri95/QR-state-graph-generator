@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-
+import sys
 import pygraphviz as pgv
 import matplotlib.pyplot as plt
 import numpy as np
@@ -167,6 +167,7 @@ class V_Constraint:
         self.constraint = constraint
         #self.v1 = v1
         #self.v2 = v2
+    
     
     
     def checkConstraint(self, variables):
@@ -392,9 +393,7 @@ class Model:
         for c in self.v_constraints:
             if not c.checkConstraint(values):
                 return False
-        
-        
-        
+            
         return True
 
     def checkValidity(self, v, d):
@@ -426,14 +425,38 @@ class Model:
 
 
 
-def envisioning(v, d, model, graph, input, kill=True):
-    if not model.checkValuesValidity(v, d):
-        return False
-
-    if graph.has_node(model.to_string(v, d)):
-        return True #model.checkValuesValidity(v, d)
+def envisioning(v, d, model, input=None, graph=None, kill=0):
     
+    if graph ==None:
+        graph = pgv.AGraph(directed=True)
+    
+    paths_dict = {}
+    
+    try:
+        build_envisioning(v, d, model, graph, paths_dict, input=input, kill=kill)
+    finally:
+        return graph
+    
+
+def build_envisioning(v, d, model, graph, paths_dict, input=None, kill=0):
+    
+    if not model.checkValuesValidity(v, d):
+        return {}
+
     current_node = model.to_string(v, d)
+    
+    if current_node in paths_dict:
+
+        if len(paths_dict[current_node]) > 40:
+            print((v,d))
+            
+            for l, n in paths_dict[current_node]:
+                print('to ' + n)
+                print(l)
+            print('TOO LONG')
+            raise ValueError('too long')
+
+        return paths_dict[current_node]
     
     print('Building:')
     print(current_node)
@@ -445,10 +468,29 @@ def envisioning(v, d, model, graph, input, kill=True):
     fontcolor = 'black'# if valid else 'red'
     
     graph.add_node(current_node, color=color, style=style, fontcolor=fontcolor, shape='rectangle', validity=state_node)
-
+    
+    paths = {current_node : ['']} if state_node else {}
+    
+    paths_dict[current_node] = paths
+    
     _d = np.array(d, copy=True, dtype=int)
 
     values = model.buildValuesDict(v, d)
+
+    def update(paths, new_paths, v, d, label):
+        if state_node:
+            if kill == 0:
+                for (node, l) in new_paths.items():
+                    graph.add_edge(current_node, node, label='\n'.join([label] + l))
+        elif model.to_string(v, d) != current_node:
+            for (node, l) in new_paths.items():
+                if node not in paths or len(paths[node]) > len(l) + 1:
+                    paths[node] = [label] + l
+            
+        if kill > 0:
+            graph.add_edge(current_node,
+                           model.to_string(v, d),
+                           label=label)
 
     for i, n in enumerate(model.getVariablesNames()):
         for p in model.getDeltaPossibilities(n, values):
@@ -456,30 +498,42 @@ def envisioning(v, d, model, graph, input, kill=True):
         
             if math.fabs(dp) == 1:
                 _d[i] = p
-                if envisioning(v, _d, model, graph, input, kill=kill) or not kill:
-                    graph.add_edge(current_node,
-                                   model.to_string(v, _d),
-                                   label='d' + n + ' += ' + str(dp))
+                new_paths = build_envisioning(v, _d, model, graph, paths_dict, input, kill=kill)
+                
+                label = 'd' + n + ' += ' + str(dp)
+                if len(new_paths) > 0:
                     valid = True
-
+                    update(paths, new_paths, v, _d, label)
+                    
                 _d[i] = d[i]
-    
-    if not valid and kill:
-        graph.delete_node(current_node)
-    else:
+
+    if state_node:
         steps = model.timeStep(v, d)
         
-        changes = [-1, 0, 1] if state_node else [0]
+        _d = np.array(d, copy=True, dtype=int)
         
         for s in steps:
             print('\tstep : ' + str(s) + ' ' + str(d))
-            for c in changes:
-                if values[input].delta + c in {-1, 0, 1}:
-                    _d[model.getVariable(input).index] = values[input].delta + c
-                    if envisioning(s, _d, model, graph, input, kill=kill) or not kill:
-                        graph.add_edge(current_node, model.to_string(s, _d), label='Time, d' + input + ' += ' + str(c))
-                        #valid = True
+            if input != None:
+                for c in range(values[input].delta-1, values[input].delta+2):
+                    if c in {-1, 0, 1}:
+                        _d[model.getVariable(input).index] = c
     
-    return valid
+                        new_paths = build_envisioning(s, _d, model, graph, paths_dict, input, kill=kill)
+                        label = 'Time, d' + input + ' += ' + str(c)
+    
+                        if len(new_paths) > 0:
+                            update(paths, new_paths, s, _d, label)
+            else:
+                new_paths = build_envisioning(s, _d, model, graph, paths_dict, input, kill=kill)
+                label = 'Time'
+    
+                if len(new_paths) > 0:
+                    update(paths, new_paths, s, _d, label)
+                        
+    if not valid or (kill == 0 and not state_node):
+        graph.delete_node(current_node)
+    
+    return paths
     
     

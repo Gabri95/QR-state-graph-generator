@@ -425,119 +425,8 @@ class Model:
         return self.to_string_dict(self.buildValuesDict(v, d))
 
 
-def expand_node(v, d, model, state_graph, kill=True, split=True):
-    children = []
-    
-    d_original = np.array(d, copy=True, dtype=int)
-    
-    def build_hidden_node(d, graph, tabs=0):
-        print(''.join(['\t' for i in range(tabs + 1)]) + str((v, d)))
-        
-        valid = model.checkValidity(v, d)
-        
-        if graph.has_node(('T\n' if split else '') + model.to_string(v, d)):
-            return valid
-        else:
-            
-            color = 'red' if valid else 'black'
-            
-            graph.add_node(('T\n' if split else '') + model.to_string(v, d), color=color)
-            
-            d_o = np.array(d, copy=True, dtype=int)
-            
-            values = model.buildValuesDict(v, d)
-            
-            valid = False
-            
-            for i, n in enumerate(model.getVariablesNames()):
-                
-                # print(values['V'].delta)
-                for p in model.getDeltaPossibilities(n, values):
-                    
-                    print(''.join(['\t' for i in range(tabs + 2)]) + n + ': ' + str(p))
-                    
-                    dp = d[i] - p
-                    
-                    if math.fabs(dp) == 1:  # and math.fabs(d_original[i] - p) == 1: #
-                        is_leaf = False
-                        
-                        d[i] = p
-                        
-                        # print('\t\t\t\t' + n + ': ' + str(p))
-                        
-                        
-                        if build_hidden_node(d, graph, tabs + 1):
-                            graph.add_edge(('T\n' if split else '') + model.to_string(v, d_o),
-                                           ('T\n' if split else '') + model.to_string(v, d),
-                                           label='d' + n + ' += ' + str(dp))
-                            valid = True
-                        
-                        d[i] = d_o[i]
-            
-            if model.checkValidity(v, d_o):
-                children.append(d_o)
-                return True
-            else:
-                if not valid:
-                    graph.delete_node(('T\n' if split else '') + model.to_string(v, d_o))
-                
-                return valid
-    
-    build_hidden_node(d, state_graph)  # pgv.AGraph(directed=True))
-    
-    return children
 
-
-def buildNode(v, d, model, state_graph, input, split=True, kill=True):
-    if not model.checkValuesValidity(v, d):
-        return []
-    
-    print('Building:')
-    print(model.to_string(v, d))
-    
-    if state_graph.has_node(model.to_string(v, d)):
-        return [(v, d)]
-    
-    children = []
-    # if not model.checkValidity(v, d):
-    children = expand_node(v, d, model, state_graph, split=split, kill=kill)
-    # else:
-    #    children = [d]
-    
-    final_nodes = []
-    
-    for child in children:
-        
-        n = (v, child)
-
-        # if model.checkValidity(v, child):
-        # print('Child: ' + str(n) + ' valid')
-        
-        if split:
-            state_graph.add_node(model.to_string(*n))
-        
-        if split or state_graph.has_edge(model.to_string(v, d), model.to_string(v, child)):
-            final_nodes.append(n)
-        
-        steps = model.timeStep(v, child)
-        
-        for s in steps:
-            print('\tstep : ' + str(s) + ' ' + str(child))
-            nodes = buildNode(s, child, model, state_graph, input, split)
-            
-            if split:
-                for node in nodes:
-                    state_graph.add_edge(model.to_string(v, child), model.to_string(*node), label='time')
-            elif len(nodes) > 0:
-                state_graph.add_edge(model.to_string(v, child), model.to_string(s, child), label='time')
-    
-    if not split and not any(np.array_equal(v, t1) and np.array_equal(d, t2) for (t1, t2) in final_nodes):
-        final_nodes.append((v, d))
-    return final_nodes
-
-
-
-def buildNode2(v, d, model, graph, input, kill=True):
+def envisioning(v, d, model, graph, input, kill=True):
     if not model.checkValuesValidity(v, d):
         return False
 
@@ -567,7 +456,7 @@ def buildNode2(v, d, model, graph, input, kill=True):
         
             if math.fabs(dp) == 1:
                 _d[i] = p
-                if buildNode2(v, _d, model, graph, input, kill=kill) or not kill:
+                if envisioning(v, _d, model, graph, input, kill=kill) or not kill:
                     graph.add_edge(current_node,
                                    model.to_string(v, _d),
                                    label='d' + n + ' += ' + str(dp))
@@ -587,7 +476,7 @@ def buildNode2(v, d, model, graph, input, kill=True):
             for c in changes:
                 if values[input].delta + c in {-1, 0, 1}:
                     _d[model.getVariable(input).index] = values[input].delta + c
-                    if buildNode2(s, _d, model, graph, input, kill=kill) or not kill:
+                    if envisioning(s, _d, model, graph, input, kill=kill) or not kill:
                         graph.add_edge(current_node, model.to_string(s, _d), label='Time, d' + input + ' += ' + str(c))
                         #valid = True
 

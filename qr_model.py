@@ -444,7 +444,7 @@ def envisioning(v, d, model, graph, input, kill=True):
     style = 'filled, bold' #if valid else ''
     fontcolor = 'black'# if valid else 'red'
     
-    graph.add_node(current_node, color=color, style=style, fontcolor=fontcolor, shape='rectangle')
+    graph.add_node(current_node, color=color, style=style, fontcolor=fontcolor, shape='rectangle', validity=state_node)
 
     _d = np.array(d, copy=True, dtype=int)
 
@@ -479,8 +479,6 @@ def envisioning(v, d, model, graph, input, kill=True):
                     if envisioning(s, _d, model, graph, input, kill=kill) or not kill:
                         graph.add_edge(current_node, model.to_string(s, _d), label='Time, d' + input + ' += ' + str(c))
                         #valid = True
-
-    
     
     return valid
     

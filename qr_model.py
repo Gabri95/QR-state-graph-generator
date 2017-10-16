@@ -418,7 +418,7 @@ class Model:
     def to_string_dict(self, values):
         s=""
         for n in self.getVariablesNames():
-            s += '\t' + n + '\t(' + str(values[n].getValueName()) + ', ' + ['-', '0', '+'][values[n].delta] + ')\t\n'
+            s += '\t' + n + '\t(' + str(values[n].getValueName()) + ', ' + ['-', '0', '+'][values[n].delta +1] + ')\t\n'
         return s
     
     def to_string(self, v, d):
@@ -575,21 +575,23 @@ def buildNode2(v, d, model, graph, input, kill=True):
 
                 _d[i] = d[i]
     
-    steps = model.timeStep(v, d)
-    
-    changes = [-1, 0, 1] if state_node else [0]
-    
-    for s in steps:
-        print('\tstep : ' + str(s) + ' ' + str(d))
-        for c in changes:
-            if values[input].delta + c in {-1, 0, 1}:
-                _d[model.getVariable(input).index] = values[input].delta + c
-                if buildNode2(s, _d, model, graph, input, kill=kill) or not kill:
-                    graph.add_edge(current_node, model.to_string(s, _d), label='Time, d' + input + ' += ' + str(c))
-                    valid = True
-
     if not valid and kill:
         graph.delete_node(current_node)
+    else:
+        steps = model.timeStep(v, d)
+        
+        changes = [-1, 0, 1] if state_node else [0]
+        
+        for s in steps:
+            print('\tstep : ' + str(s) + ' ' + str(d))
+            for c in changes:
+                if values[input].delta + c in {-1, 0, 1}:
+                    _d[model.getVariable(input).index] = values[input].delta + c
+                    if buildNode2(s, _d, model, graph, input, kill=kill) or not kill:
+                        graph.add_edge(current_node, model.to_string(s, _d), label='Time, d' + input + ' += ' + str(c))
+                        #valid = True
+
+    
     
     return valid
     

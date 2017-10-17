@@ -19,10 +19,10 @@ class Variable:
         self.values = values
         self.values_types = values_types
         
-        self.p_source = []
-        self.p_target = []
-        self.i_source = []
-        self.i_target = []
+        self.p_source = {}
+        self.p_target = {}
+        self.i_target = {}
+        self.i_source = {}
         
 #         if not self.isValidValue(zero):
 #             raise ValueError('Error! Not valid "zero" index!')
@@ -62,116 +62,56 @@ class Variable:
         
         
     
-    def addPConstraintTarget(self, c):
-        if not isinstance(c, P_Constraint):
-            raise ValueError('Error! P_Constraint expected!')
-        if c.v2 != self:
-            raise ValueError('Error! P_Constraint with this variable as target expected!')
+    def addPConstraintTarget(self, incremental, src):
+        if type(src) != str:
+            raise ValueError('Error! string expected as src!')
         
-        self.p_target.append(c)
-    
-    def addPConstraintSource(self, c):
-        if not isinstance(c, P_Constraint):
-            raise ValueError('Error! P_Constraint expected!')
-        if c.v1 != self:
-            raise ValueError('Error! P_Constraint with this variable as source expected!')
-        
-        self.p_source.append(c)
-    
-    def addIConstraintTarget(self, c):
-        if not isinstance(c, I_Constraint):
-            raise ValueError('Error! I_Constraint expected!')
-        if c.v2 != self:
-            raise ValueError('Error! I_Constraint with this variable as target expected!')
-        
-        self.i_target.append(c)
-    
-    def addIConstraintSource(self, c):
-        if not isinstance(c, I_Constraint):
-            raise ValueError('Error! I_Constraint expected!')
-        if c.v1 != self:
-            raise ValueError('Error! I_Constraint with this variable as source expected!')
-        
-        self.i_source.append(c)
-
-class P_Constraint:
-    
-    def __init__(self, incremental, v1, v2):
-        if not type(incremental) is bool:
-             raise ValueError('Error! Expected boolean value for incremental!')
-        
-        if not isinstance(v1, Variable) or not isinstance(v2, Variable):
-            raise ValueError('Error! Expected a Variable instance!')
+        if src not in self.p_target:
+            self.p_target[src] = incremental
             
-        self.incremental = 1 if incremental else -1
-        self.v1 = v1
-        self.v2 = v2
+        elif self.p_target[src] != incremental:
+            raise ValueError('Error! Added the same Proportional constraint on ' + self.name + ' with two different signs!')
         
-        v1.addPConstraintSource(self)
-        v2.addPConstraintTarget(self)
     
+    def addPConstraintSource(self, incremental, target):
+        if type(target) != str:
+            raise ValueError('Error! string expected as target!')
+    
+        if target not in self.p_source:
+            self.p_source[target] = incremental
 
-    def constraintDeriv(self, variables):
-        return set([-1, 0, 1])
+        elif self.p_source[target] != incremental:
+            raise ValueError('Error! Added the same Proportional constraint from ' + self.name + ' with two different signs!')
 
-    def constraintSign(self, variables):
-        # if the constraint is applicable, i.e., the hypothesis holds and the delta
-        # of the second variable is incrementable or decrementable (it is 0)
+    def addIConstraintTarget(self, incremental, src):
+        if type(src) != str:
+            raise ValueError('Error! string expected as src!')
     
-        return self.incremental * variables[self.v1.name].delta
-        
+        if src not in self.i_target:
+            self.i_target[src] = incremental
     
-class I_Constraint:
+        elif self.i_target[src] != incremental:
+            raise ValueError(
+                'Error! Added the same Incremental constraint on ' + self.name + ' with two different signs!')
+
     
-    def __init__(self, incremental, v1, v2):
-        if not type(incremental) is bool:
-             raise ValueError('Error! Expected boolean value for incremental!')
-        
-        if not isinstance(v1, Variable) or not isinstance(v2, Variable):
-            raise ValueError('Error! Expected a Variable instance!')
+    def addIConstraintSource(self, incremental, target):
+        if type(target) != str:
+            raise ValueError('Error! string expected as target!')
+    
+        if target not in self.i_source:
+            self.i_source[target] = incremental
             
-        self.incremental = 1 if incremental else -1
-        self.v1 = v1
-        self.v2 = v2
+        elif self.i_source[target] != incremental:
+            raise ValueError(
+                'Error! Added the same Incremental constraint from ' + self.name + ' with two different signs!')
+
+
+
         
-        v1.addIConstraintSource(self)
-        v2.addIConstraintTarget(self)  
     
-   
-    def constraintDeriv(self, variables):
-        s = set({self.incremental * variables[self.v1.name].delta})
-        if variables[self.v2.name].delta == 0:
-            s |= {0}
-        return s
         
         
-    def constraintSign(self, variables):
-        #if the constraint is applicable, i.e., the hypothesis holds and the delta
-        #of the second variable is incrementable or decrementable (it is 0)
-        
-        return self.incremental * min(1, variables[self.v1.name].val)
-        
-        
-class V_Constraint:
-    
-    #the 'constraint' function should have as a signature: dict{"variable_name" : VariableValue}
-    #and access variables using this dictionary and the name used to define the variables
-    
-    def __init__(self, constraint): #, v1, v2):
-        if not callable(constraint):
-             raise ValueError('Error! Expected "constraint" to be a boolean function!')
-        
-        #if not isinstance(v1, Variable) or not isinstance(v2, Variable):
-        #    raise ValueError('Error! Expected a Variable instance!')
-            
-        self.constraint = constraint
-        #self.v1 = v1
-        #self.v2 = v2
-    
-    
-    
-    def checkConstraint(self, variables):
-        return self.constraint(variables)
 
 class VariableValue:
     
@@ -331,38 +271,96 @@ class Model:
         return len(self.variables)
     
     def addPConstraint(self, incremental, v1, v2):
-        c = P_Constraint(incremental, self.getVariable(v1), self.getVariable(v2))
-        self.p_constraints.append(c)
     
-    def addVConstraint(self, constraint):
-        c = V_Constraint(constraint)
-        self.v_constraints.append(c)
-    
-    def addIConstraint(self, incremental, v1, v2):
-        c = I_Constraint(incremental, self.getVariable(v1), self.getVariable(v2))
-        self.i_constraints.append(c)
+        incremental = 1 if incremental else -1
+        
+        var1, var2 = self.getVariable(v1), self.getVariable(v2)
 
+        print('adding ' + v1 + ' as P source for ' + v2)
+        
+        var1.addPConstraintSource(incremental, v2)
+        var2.addPConstraintTarget(incremental, v1)
+        self.p_constraints.append((v1, v2, incremental))
+
+        for v, i in var1.p_target.items():
+            print('\tadding ' + v + ' as P source for ' + v2)
+            var2.addPConstraintTarget(i * incremental, v)
+            self.getVariable(v).addPConstraintSource(i * incremental, v2)
+            for t, incr in var2.p_source.items():
+                print('\tadding ' + v + ' as P source for ' + t)
+                self.getVariable(t).addPConstraintTarget(i * incr * incremental, v)
+                self.getVariable(v).addPConstraintSource(i * incr * incremental, t)
+        
+        for v, i in var1.i_target.items():
+            print('\tadding ' + v + ' as I source for ' + v2)
+            var2.addIConstraintTarget(i * incremental, v)
+            self.getVariable(v).addIConstraintSource(i * incremental, v2)
+            for t, incr in var2.p_source.items():
+                print('\tadding ' + v + ' as I source for ' + t)
+                self.getVariable(t).addIConstraintTarget(i * incr * incremental, v)
+                self.getVariable(v).addIConstraintSource(i * incr * incremental, t)
+
+    def addIConstraint(self, incremental, v1, v2):
+        
+        incremental = 1 if incremental else -1
+        
+        var1, var2 = self.getVariable(v1), self.getVariable(v2)
+
+        print('adding ' + v1 + ' as I source for ' + v2)
+        
+        var1.addIConstraintSource(incremental, v2)
+        var2.addIConstraintTarget(incremental, v1)
+        self.i_constraints.append((v1, v2, incremental))
+        
+        
+        
+        # for t, incr in var2.p_source.items():
+        #     print('\tadding ' + v1 + ' as I source for ' + t)
+        #     self.getVariable(t).addIConstraintTarget(incremental * incr, v1)
+        #     var1.addIConstraintSource(incremental * incr, t)
+        
+        
+    def addVConstraint(self, constraint):
+        self.v_constraints.append(constraint)
+
+    def i_constraint(self, v1, v2, incremental, values):
+        s = set({incremental * values[v1].delta})
+        if values[v2].delta == 0:
+            s |= {0}
+        return incremental * min(1, values[v1].val), s
+    
+    def p_constraint(self, v1, v2, incremental, values):
+        return incremental * values[v1].delta, {-1, 0, 1}
+
+    
     def getDeltaPossibilities(self, variable, values, use_second_order=True):
         var = self.getVariable(variable)
 
-        # incr, stat, decr = False, False, False
         incr, decr = False, False
-        stat = len(var.i_target + var.p_target) > 0
+        stat = len(var.i_target) + len(var.p_target) > 0
         second_order = set()
-        
-        for c in var.i_target + var.p_target:
-            s = c.constraintSign(values)
-            
-            if use_second_order:
-                second_order |= c.constraintDeriv(values)
-            
-            #print(c.v1.name + '  ' + c.v2.name + ':    ' + str(s))
-            
-            incr = incr or s > 0
-            # stat = stat or s == 0
-            decr = decr or s < 0
 
-            stat = stat and s == 0
+        for c, i in var.p_target.items():
+            sign, so = self.p_constraint(c, variable, i, values)
+    
+            if use_second_order:
+                second_order |= so
+    
+            incr = incr or sign > 0
+            decr = decr or sign < 0
+            stat = stat and sign == 0
+        
+        for c, i in var.i_target.items():
+            sign, so = self.i_constraint(c, variable, i, values)
+    
+            if use_second_order:
+                second_order |= so
+    
+            incr = incr or sign > 0
+            decr = decr or sign < 0
+            stat = stat and sign == 0
+            
+        
     
         possibilities = []
         if incr and not decr:
@@ -391,7 +389,7 @@ class Model:
                 return False
     
         for c in self.v_constraints:
-            if not c.checkConstraint(values):
+            if not c(values):
                 return False
             
         return True
@@ -408,7 +406,7 @@ class Model:
                 return False
     
         for c in self.v_constraints:
-            if not c.checkConstraint(values):
+            if not c(values):
                 return False
     
         return True
@@ -431,12 +429,15 @@ def envisioning(v, d, model, input=None, graph=None, kill=0):
         graph = pgv.AGraph(directed=True)
     
     paths_dict = {}
+
+    build_envisioning(v, d, model, graph, paths_dict, input=input, kill=kill)
+    return graph
     
-    try:
-        build_envisioning(v, d, model, graph, paths_dict, input=input, kill=kill)
-    finally:
-        return graph
-    
+    # try:
+    #     build_envisioning(v, d, model, graph, paths_dict, input=input, kill=kill)
+    # finally:
+    #     return graph
+    #
 
 def build_envisioning(v, d, model, graph, paths_dict, input=None, kill=0):
     

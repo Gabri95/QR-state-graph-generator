@@ -421,7 +421,15 @@ class Model:
     def to_string(self, v, d):
         return self.to_string_dict(self.buildValuesDict(v, d))
 
-
+    
+    def variables_names_to_strings(self):
+        vals =[]
+        deltas = []
+        
+        for v in self.variables:
+            vals.append('v' + v.name)
+            deltas.append('d' + v.name)
+        return vals + deltas
 
 def envisioning(v, d, model, input=None, graph=None, kill=0):
     
@@ -431,6 +439,10 @@ def envisioning(v, d, model, input=None, graph=None, kill=0):
     paths_dict = {}
 
     build_envisioning(v, d, model, graph, paths_dict, input=input, kill=kill)
+    
+    for i, n in enumerate(graph.nodes()):
+        n.attr['id'] = i
+    
     return graph
     
     # try:
@@ -468,7 +480,10 @@ def build_envisioning(v, d, model, graph, paths_dict, input=None, kill=0):
     style = 'filled, bold' #if valid else ''
     fontcolor = 'black'# if valid else 'red'
     
+    
     graph.add_node(current_node, color=color, style=style, fontcolor=fontcolor, shape='rectangle', validity=state_node)
+
+    graph.get_node(current_node).attr.update({k : v for k,v in zip(model.variables_names_to_strings(), np.concatenate((v, d)))})
     
     paths = {current_node : ['']} if state_node else {}
     

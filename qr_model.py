@@ -425,7 +425,7 @@ class Model:
 
 def envisioning(v, d, model, input=None, graph=None, kill=0):
     
-    if graph ==None:
+    if graph is None:
         graph = pgv.AGraph(directed=True)
     
     paths_dict = {}
@@ -512,25 +512,48 @@ def build_envisioning(v, d, model, graph, paths_dict, input=None, kill=0):
         steps = model.timeStep(v, d)
         
         _d = np.array(d, copy=True, dtype=int)
-        
-        for s in steps:
-            print('\tstep : ' + str(s) + ' ' + str(d))
-            if input != None:
-                for c in range(values[input].delta-1, values[input].delta+2):
-                    if c in {-1, 0, 1}:
-                        _d[model.getVariable(input).index] = c
-    
+
+        delta = values[input].delta
+        if input != None and values[input].isRangeValue():
+            for c in {-1, 0, 1}:  # range(values[input].delta-1, values[input].delta+2):
+                if c + delta in {-1, 0, 1}:
+                    for s in steps:
+                        _d[model.getVariable(input).index] = c +delta
+                        print('\tstep : ' + str(s) + ' ' + str(_d))
+                        
+                
                         new_paths = build_envisioning(s, _d, model, graph, paths_dict, input, kill=kill)
-                        label = 'Time, d' + input + ' += ' + str(c)
-    
+                        label = 'Time, d' + input + ' += ' + str(c+delta)
+                
                         if len(new_paths) > 0:
                             update(paths, new_paths, s, _d, label)
-            else:
+            
+            _d[model.getVariable(input).index] = delta
+        else:
+    
+            for c in {-1, 1}:
+                if c + delta in {-1, 0, 1}:
+                    _d[model.getVariable(input).index] = c + delta
+                    print('\tstep : ' + str(v) + ' ' + str(_d))
+            
+                    new_paths = build_envisioning(v, _d, model, graph, paths_dict, input, kill=kill)
+                    label = 'Time, d' + input + ' += ' + str(c + delta)
+            
+                    if len(new_paths) > 0:
+                        update(paths, new_paths, v, _d, label)
+    
+            _d[model.getVariable(input).index] = delta
+            
+            for s in steps:
+                print('\tstep : ' + str(s) + ' ' + str(_d))
                 new_paths = build_envisioning(s, _d, model, graph, paths_dict, input, kill=kill)
                 label = 'Time'
     
                 if len(new_paths) > 0:
                     update(paths, new_paths, s, _d, label)
+        
+        
+            
                         
     if not valid or (kill == 0 and not state_node):
         graph.delete_node(current_node)

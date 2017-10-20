@@ -1,10 +1,7 @@
 #!/usr/bin/python
 
-import sys
-import pygraphviz as pgv
-import matplotlib.pyplot as plt
 import numpy as np
-import math
+
 
 class Variable:
     def __init__(self, name, values, values_types): #, zero):
@@ -48,8 +45,7 @@ class Variable:
         if not isinstance(value, VariableValue):
             raise ValueError('Error! VariableValue expected!')
     
-        return value.val >= 0 and \
-               value.val < self.getNumValues()
+        return value.val >= 0 and value.val < self.getNumValues()
 
     def isValid(self, value):
         if not isinstance(value, VariableValue):
@@ -58,8 +54,6 @@ class Variable:
         return self.isValidValue(value) and \
                (self.values_types[-1] or value.val != self.getMaxVal() or value.delta <= 0) and \
                (self.values_types[0] or value.val != 0 or value.delta >= 0)
-        
-        
         
     
     def addPConstraintTarget(self, incremental, src):
@@ -106,13 +100,6 @@ class Variable:
             raise ValueError(
                 'Error! Added the same Incremental constraint from ' + self.name + ' with two different signs!')
 
-
-
-        
-    
-        
-        
-
 class VariableValue:
     
     def __init__(self, variable, val=None, delta=None):
@@ -120,7 +107,7 @@ class VariableValue:
         if not isinstance(variable, Variable):
             raise ValueError('Error! Expected a Variable instance!')
         
-        if (val != None and type(val) != int) or (delta != None and type(delta) != int):
+        if (not val is None and type(val) != int) or (not delta is None and type(delta) != int):
             raise ValueError('Error! Expected int type for val and delta!')
         
         self.variable = variable
@@ -180,45 +167,43 @@ class Model:
         m = np.zeros(len(self.variables), dtype=int)
         
         for var in self.variables:
-            m[var.index] = 1 - int(var.isRangeValue(v[var.index]))
+            m[var.index] = int(not var.isRangeValue(v[var.index]))
         
         return m
         
-    def getRangeValueVariables(self, values):
-        l = []
+    def getRangePointValueVariables(self, v):
+        r = []
+        p = []
+        for var in self.variables:
+            if var.isRangeValue(v[var.index]):
+                r.append(var.index)
+            else:
+                p.append(var.index)
         
-        for v in self.variables:
-            if values[v.name].isRangeValue():
-                l.append(v)
-        
-        return l
+        return r, p
     
     def timeStep(self, v, d):
         
-        m = self.pointValuesMask(v)
+        range_values, point_values = self.getRangePointValueVariables(v)
         
+        vals = np.array(v, copy=True, dtype=int)
         
-        values = self.buildValuesDict(v, d)
-        range_values = self.getRangeValueVariables(values)
+        for i in point_values:
+            vals[i] += d[i]
         
-        
-        
-        vals = v + m*d
-        
-        combinations = []
-        
-        def generate(i, v):
+        def generate(i, v, combinations):
             if i < 0:
                 combinations.append(np.array(v, copy=True, dtype=int))
             else:
-                generate(i-1, v)
+                generate(i-1, v, combinations)
                 
-                if d[range_values[i].index] != 0:
-                    v[range_values[i].index] += d[range_values[i].index]
-                    generate(i-1, v)
-                    v[range_values[i].index] -= d[range_values[i].index]
-        
-        generate(len(range_values)-1, vals)
+                if d[range_values[i]] != 0:
+                    v[range_values[i]] += d[range_values[i]]
+                    generate(i-1, v, combinations)
+                    v[range_values[i]] -= d[range_values[i]]
+
+        combinations = []
+        generate(len(range_values)-1, vals, combinations)
         
         return combinations
     
@@ -232,22 +217,6 @@ class Model:
             dictionary[self.variables[i].name] = VariableValue(self.variables[i], int(v), int(d))
         
         return dictionary
-    
-    def buildValuesArray(self, values):
-        if len(values) != len(self.variables):
-            raise ValueError("Error! the length of values and delta has to be the same of the number of variables!")
-        
-        N = self.getNVariables()
-        
-        v = np.empty(N, dtype=int)
-        d = np.empty(N, dtype=int)
-        
-        for i, var in enumerate(self.variables):
-            v[i] = values[var.name].val
-            d[i] = values[var.name].delta
-        
-        return v, d
-    
     
         
     def getVariablesNames(self):
@@ -267,9 +236,6 @@ class Model:
         else:
             raise ValueError('Error! Expected integer or string!')
         
-    def getNVariables(self):
-        return len(self.variables)
-    
     def addPConstraint(self, incremental, v1, v2):
     
         incremental = 1 if incremental else -1
@@ -312,8 +278,6 @@ class Model:
         var2.addIConstraintTarget(incremental, v1)
         self.i_constraints.append((v1, v2, incremental))
         
-        
-        
         # for t, incr in var2.p_source.items():
         #     print('\tadding ' + v1 + ' as I source for ' + t)
         #     self.getVariable(t).addIConstraintTarget(incremental * incr, v1)
@@ -324,32 +288,20 @@ class Model:
         self.v_constraints.append(constraint)
 
     def i_constraint(self, v1, v2, incremental, values):
-        s = set({incremental * values[v1].delta})
+        s = {incremental * values[v1].delta}
         if values[v2].delta == 0:
             s |= {0}
         return incremental * min(1, values[v1].val), s
     
     def p_constraint(self, v1, v2, incremental, values):
-        return incremental * values[v1].delta, {-1, 0, 1}
+        return incremental * values[v1].delta
 
-    
     def getDeltaPossibilities(self, variable, values, use_second_order=True):
         var = self.getVariable(variable)
 
         incr, decr = False, False
-        stat = len(var.i_target) + len(var.p_target) > 0
         second_order = set()
 
-        for c, i in var.p_target.items():
-            sign, so = self.p_constraint(c, variable, i, values)
-    
-            if use_second_order:
-                second_order |= so
-    
-            incr = incr or sign > 0
-            decr = decr or sign < 0
-            stat = stat and sign == 0
-        
         for c, i in var.i_target.items():
             sign, so = self.i_constraint(c, variable, i, values)
     
@@ -358,31 +310,32 @@ class Model:
     
             incr = incr or sign > 0
             decr = decr or sign < 0
-            stat = stat and sign == 0
-            
         
+        for c, i in var.p_target.items():
+            sign = self.p_constraint(c, variable, i, values)
     
-        possibilities = []
-        if incr and not decr:
-            possibilities.append(1)
+            incr = incr or sign > 0
+            decr = decr or sign < 0
+            
+    
+        if len(var.i_target) + len(var.p_target) == 0:
+            return []
+        elif incr and not decr:
+            return [1]
         elif decr and not incr:
-            possibilities.append(-1)
-        elif stat:
-            possibilities.append(0)
-        elif incr and decr:
+            return [-1]
+        elif not decr and not incr:
+            return [0]
+        else:
             if use_second_order:
                 if -1 in second_order and 1 in second_order:
                     second_order |= {0}
-                possibilities = set([values[var.name].delta + d for d in second_order]) & {-1, 0, 1}
+                return set([values[var.name].delta + d for d in second_order]) & {-1, 0, 1}
             else:
-                possibilities = [-1, 0, 1]
-            
-        return possibilities
+                return [-1, 0, 1]
 
 
-    def checkValuesValidity(self, v, d):
-    
-        values = self.buildValuesDict(v, d)
+    def checkValuesValidity(self, values):
     
         for k, v in values.items():
             if not v.isValidValue():
@@ -394,15 +347,14 @@ class Model:
             
         return True
 
-    def checkValidity(self, v, d):
-        values = self.buildValuesDict(v, d)
+    def checkValidity(self, values):
     
         for k, v in values.items():
             if not v.isValid():
                 return False
             
             deltas = self.getDeltaPossibilities(v.variable.name, values, use_second_order=False)
-            if len(deltas) > 0 and not v.delta in deltas:
+            if len(deltas) > 0 and v.delta not in deltas:
                 return False
     
         for c in self.v_constraints:
@@ -411,17 +363,18 @@ class Model:
     
         return True
 
-
     def to_string_dict(self, values):
-        s=""
-        for n in self.getVariablesNames():
-            s += '\t' + n + '\t(' + str(values[n].getValueName()) + ', ' + ['-', '0', '+'][values[n].delta +1] + ')\t\n'
+        s=''
+        for i, n in enumerate(self.getVariablesNames()):
+            #s += '\t' + n + '\t(' + str(values[n].getValueName()) + ', ' + ['-', '0', '+'][values[n].delta +1] + ')\t\n'
+            s += n + '(' + str(values[n].getValueName()) + ', ' + ['-', '0', '+'][values[n].delta + 1] + ')'
+            if i < len(self.variables)-1:
+                s += '\n'
         return s
     
     def to_string(self, v, d):
         return self.to_string_dict(self.buildValuesDict(v, d))
 
-    
     def variables_names_to_strings(self):
         vals =[]
         deltas = []
@@ -431,148 +384,3 @@ class Model:
             deltas.append('d' + v.name)
         return vals + deltas
 
-def envisioning(v, d, model, input=None, graph=None, kill=0):
-    
-    if graph is None:
-        graph = pgv.AGraph(directed=True)
-    
-    paths_dict = {}
-
-    build_envisioning(v, d, model, graph, paths_dict, input=input, kill=kill)
-    
-    for i, n in enumerate(graph.nodes()):
-        n.attr['id'] = i
-    
-    return graph
-    
-    # try:
-    #     build_envisioning(v, d, model, graph, paths_dict, input=input, kill=kill)
-    # finally:
-    #     return graph
-    #
-
-def build_envisioning(v, d, model, graph, paths_dict, input=None, kill=0):
-    
-    if not model.checkValuesValidity(v, d):
-        return {}
-
-    current_node = model.to_string(v, d)
-    
-    if current_node in paths_dict:
-
-        if len(paths_dict[current_node]) > 40:
-            print((v,d))
-            
-            for l, n in paths_dict[current_node]:
-                print('to ' + n)
-                print(l)
-            print('TOO LONG')
-            raise ValueError('too long')
-
-        return paths_dict[current_node]
-    
-    print('Building:')
-    print(current_node)
-    
-    valid = state_node = model.checkValidity(v, d)
-
-    color = 'red' if valid else 'gray'
-    style = 'filled, bold' #if valid else ''
-    fontcolor = 'black'# if valid else 'red'
-    
-    
-    graph.add_node(current_node, color=color, style=style, fontcolor=fontcolor, shape='rectangle', validity=state_node)
-
-    graph.get_node(current_node).attr.update({k : v for k,v in zip(model.variables_names_to_strings(), np.concatenate((v, d)))})
-    
-    paths = {current_node : ['']} if state_node else {}
-    
-    paths_dict[current_node] = paths
-    
-    _d = np.array(d, copy=True, dtype=int)
-
-    values = model.buildValuesDict(v, d)
-
-    def update(paths, new_paths, v, d, label):
-        if state_node:
-            if kill == 0:
-                for (node, l) in new_paths.items():
-                    graph.add_edge(current_node, node, label='\n'.join([label] + l))
-        elif model.to_string(v, d) != current_node:
-            for (node, l) in new_paths.items():
-                if node not in paths or len(paths[node]) > len(l) + 1:
-                    paths[node] = [label] + l
-            
-        if kill > 0:
-            graph.add_edge(current_node,
-                           model.to_string(v, d),
-                           label=label)
-
-    for i, n in enumerate(model.getVariablesNames()):
-        for p in model.getDeltaPossibilities(n, values):
-            dp = p - _d[i]
-        
-            if math.fabs(dp) == 1:
-                _d[i] = p
-                new_paths = build_envisioning(v, _d, model, graph, paths_dict, input, kill=kill)
-                
-                label = 'd' + n + ' += ' + str(dp)
-                if len(new_paths) > 0:
-                    valid = True
-                    update(paths, new_paths, v, _d, label)
-                    
-                _d[i] = d[i]
-
-    if state_node:
-        steps = model.timeStep(v, d)
-        
-        _d = np.array(d, copy=True, dtype=int)
-
-        delta = values[input].delta
-        if input != None and values[input].isRangeValue():
-            for c in {-1, 0, 1}:  # range(values[input].delta-1, values[input].delta+2):
-                if c + delta in {-1, 0, 1}:
-                    for s in steps:
-                        _d[model.getVariable(input).index] = c +delta
-                        print('\tstep : ' + str(s) + ' ' + str(_d))
-                        
-                
-                        new_paths = build_envisioning(s, _d, model, graph, paths_dict, input, kill=kill)
-                        label = 'Time, d' + input + ' += ' + str(c+delta)
-                
-                        if len(new_paths) > 0:
-                            update(paths, new_paths, s, _d, label)
-            
-            _d[model.getVariable(input).index] = delta
-        else:
-    
-            for c in {-1, 1}:
-                if c + delta in {-1, 0, 1}:
-                    _d[model.getVariable(input).index] = c + delta
-                    print('\tstep : ' + str(v) + ' ' + str(_d))
-            
-                    new_paths = build_envisioning(v, _d, model, graph, paths_dict, input, kill=kill)
-                    label = 'Time, d' + input + ' += ' + str(c + delta)
-            
-                    if len(new_paths) > 0:
-                        update(paths, new_paths, v, _d, label)
-    
-            _d[model.getVariable(input).index] = delta
-            
-            for s in steps:
-                print('\tstep : ' + str(s) + ' ' + str(_d))
-                new_paths = build_envisioning(s, _d, model, graph, paths_dict, input, kill=kill)
-                label = 'Time'
-    
-                if len(new_paths) > 0:
-                    update(paths, new_paths, s, _d, label)
-        
-        
-            
-                        
-    if not valid or (kill == 0 and not state_node):
-        graph.delete_node(current_node)
-    
-    return paths
-    
-    

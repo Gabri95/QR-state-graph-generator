@@ -1,6 +1,9 @@
 #!/usr/bin/python
 
+from toposort import toposort, toposort_flatten
+import math
 import numpy as np
+import pygraphviz as pgv
 
 
 class Variable:
@@ -33,6 +36,8 @@ class Variable:
         self.index = i
     
     def isRangeValue(self, i):
+        if i >= len(self.values_types):
+            print('ERROR! ' + str(i) + ' ' + self.name)
         return self.values_types[i]
     
     def getNumValues(self):
@@ -55,7 +60,6 @@ class Variable:
                (self.values_types[-1] or value.val != self.getMaxVal() or value.delta <= 0) and \
                (self.values_types[0] or value.val != 0 or value.delta >= 0)
         
-    
     def addPConstraintTarget(self, incremental, src):
         if type(src) != str:
             raise ValueError('Error! string expected as src!')
@@ -66,7 +70,6 @@ class Variable:
         elif self.p_target[src] != incremental:
             raise ValueError('Error! Added the same Proportional constraint on ' + self.name + ' with two different signs!')
         
-    
     def addPConstraintSource(self, incremental, target):
         if type(target) != str:
             raise ValueError('Error! string expected as target!')
@@ -120,23 +123,6 @@ class VariableValue:
     def getVariable(self):
         return self.variable
     
-    def setValue(self, i):
-        if not self.variable.isValidValue(i):
-            return False
-        else:
-            self.val = i
-            return True
-    
-    def setDelta(self, i):
-        if i not in {-1, 0, 1}:
-            return False
-        else:
-            self.delta = i
-            return True
-    
-    def incrementValue(self, i):
-        return self.setValue(self.val + i)
-    
     def isValidValue(self):
         return self.variable.isValidValue(self)
     
@@ -157,19 +143,16 @@ class Model:
         
         self.variables = variables
         self.v_constraints = []
-        self.p_constraints = []
-        self.i_constraints = []
-        
+
+        self.p_dependencies = {}
+        self.i_dependencies = {}
+
         for i, v in enumerate(self.variables):
+            self.p_dependencies[v.name] = set()
+            self.i_dependencies[v.name] = set()
             v.setIndex(i)
-    
-    def pointValuesMask(self, v):
-        m = np.zeros(len(self.variables), dtype=int)
-        
-        for var in self.variables:
-            m[var.index] = int(not var.isRangeValue(v[var.index]))
-        
-        return m
+
+        self.topsort = self.getVariablesNames()
         
     def getRangePointValueVariables(self, v):
         r = []
@@ -246,25 +229,8 @@ class Model:
         
         var1.addPConstraintSource(incremental, v2)
         var2.addPConstraintTarget(incremental, v1)
-        self.p_constraints.append((v1, v2, incremental))
-
-        for v, i in var1.p_target.items():
-            print('\tadding ' + v + ' as P source for ' + v2)
-            var2.addPConstraintTarget(i * incremental, v)
-            self.getVariable(v).addPConstraintSource(i * incremental, v2)
-            for t, incr in var2.p_source.items():
-                print('\tadding ' + v + ' as P source for ' + t)
-                self.getVariable(t).addPConstraintTarget(i * incr * incremental, v)
-                self.getVariable(v).addPConstraintSource(i * incr * incremental, t)
         
-        for v, i in var1.i_target.items():
-            print('\tadding ' + v + ' as I source for ' + v2)
-            var2.addIConstraintTarget(i * incremental, v)
-            self.getVariable(v).addIConstraintSource(i * incremental, v2)
-            for t, incr in var2.p_source.items():
-                print('\tadding ' + v + ' as I source for ' + t)
-                self.getVariable(t).addIConstraintTarget(i * incr * incremental, v)
-                self.getVariable(v).addIConstraintSource(i * incr * incremental, t)
+        self.p_dependencies[v2].add((v1, incremental))
 
     def addIConstraint(self, incremental, v1, v2):
         
@@ -276,64 +242,45 @@ class Model:
         
         var1.addIConstraintSource(incremental, v2)
         var2.addIConstraintTarget(incremental, v1)
-        self.i_constraints.append((v1, v2, incremental))
+
+        self.i_dependencies[v2].add((v1, incremental))
+    
+    def dependencies_sort(self):
         
-        # for t, incr in var2.p_source.items():
-        #     print('\tadding ' + v1 + ' as I source for ' + t)
-        #     self.getVariable(t).addIConstraintTarget(incremental * incr, v1)
-        #     var1.addIConstraintSource(incremental * incr, t)
-        
+        dependencies = {t: {s for (s, i) in l} for t, l in self.p_dependencies.items()}
+        print(dependencies)
+        self.topsort = toposort_flatten(dependencies)
+        print(self.topsort)
         
     def addVConstraint(self, constraint):
         self.v_constraints.append(constraint)
 
     def i_constraint(self, v1, v2, incremental, values):
-        s = {incremental * values[v1].delta}
-        if values[v2].delta == 0:
-            s |= {0}
-        return incremental * min(1, values[v1].val), s
+    
+        sign = incremental * min(1, values[v1].val)
+        
+        s = incremental * values[v1].delta
+        
+        m = s < 0
+        p = s > 0
+        z = s == 0 or values[v2].delta != 0
+
+        return sign, m, z, p
     
     def p_constraint(self, v1, v2, incremental, values):
         return incremental * values[v1].delta
 
-    def getDeltaPossibilities(self, variable, values, use_second_order=True):
-        var = self.getVariable(variable)
-
-        incr, decr = False, False
-        second_order = set()
-
-        for c, i in var.i_target.items():
-            sign, so = self.i_constraint(c, variable, i, values)
+    def checkValidity(self, values):
     
-            if use_second_order:
-                second_order |= so
+        for k, v in values.items():
+            if not v.isValid():
+                return False
     
-            incr = incr or sign > 0
-            decr = decr or sign < 0
-        
-        for c, i in var.p_target.items():
-            sign = self.p_constraint(c, variable, i, values)
+        for c in self.v_constraints:
+            if not c(values):
+                return False
     
-            incr = incr or sign > 0
-            decr = decr or sign < 0
-            
-    
-        if len(var.i_target) + len(var.p_target) == 0:
-            return []
-        elif incr and not decr:
-            return [1]
-        elif decr and not incr:
-            return [-1]
-        elif not decr and not incr:
-            return [0]
-        else:
-            if use_second_order:
-                if -1 in second_order and 1 in second_order:
-                    second_order |= {0}
-                return set([values[var.name].delta + d for d in second_order]) & {-1, 0, 1}
-            else:
-                return [-1, 0, 1]
-
+        return True
 
     def checkValuesValidity(self, values):
     
@@ -344,25 +291,9 @@ class Model:
         for c in self.v_constraints:
             if not c(values):
                 return False
-            
-        return True
-
-    def checkValidity(self, values):
-    
-        for k, v in values.items():
-            if not v.isValid():
-                return False
-            
-            deltas = self.getDeltaPossibilities(v.variable.name, values, use_second_order=False)
-            if len(deltas) > 0 and v.delta not in deltas:
-                return False
-    
-        for c in self.v_constraints:
-            if not c(values):
-                return False
     
         return True
-
+    
     def to_string_dict(self, values):
         s=''
         for i, n in enumerate(self.getVariablesNames()):
@@ -384,3 +315,203 @@ class Model:
             deltas.append('d' + v.name)
         return vals + deltas
 
+    def envisioning(self, v, d, input=None, graph=None):
+        if graph is None:
+            graph = pgv.AGraph(directed=True, fixedsize=True)
+        
+        paths_dict = {}
+        
+        self.dependencies_sort()
+        
+        self.branches(v, d, graph, paths_dict, input=input)
+        
+        for i, n in enumerate(graph.nodes()):
+            n.attr['id'] = i
+        
+        return graph
+
+    def branches(self, v, d, graph, paths_dict, input):
+        
+        id = ''.join([str(i) for i in list(v) + list(d)])
+        
+        if id in paths_dict:
+            return paths_dict[id]
+
+        paths_dict[id] = []
+        
+        if not self.checkValuesValidity(self.buildValuesDict(v, d)):
+            return []
+        
+        def branches_rec(current, deltas):
+            values = self.buildValuesDict(v, deltas)
+    
+            _d = np.array(deltas, copy=True, dtype=int)
+            
+            if current >= len(self.variables):
+                print('inferred ' + str(deltas) + ' from ' + str(d))
+                if self.checkValidity(values):
+                    print('VALID')
+                    print('\tchanges ' + str(_d - d))
+                    paths_dict[id].append((_d, _d - d))
+                    print(paths_dict[id])
+                else:
+                    print('NOT VALID')
+                return
+            
+            variable = self.topsort[current]
+            print('Inferring ' + variable)
+            var_idx = self.getVariable(variable).index
+            
+            possibilities = set()
+            incr, stat, decr = False, False, False
+            so_m, so_z, so_p = False, False, False
+            
+            for s, i in self.i_dependencies[variable]:
+                sign, m, z, p = self.i_constraint(s, variable, i, values)
+                
+                incr |= sign > 0
+                decr |= sign < 0
+                stat |= sign == 0
+                
+                if not(so_m or so_z or so_p):
+                    so_m, so_z, so_p = m, z, p
+                if (m or so_m) and (p or so_p):
+                    so_m, so_z, so_p = True, True, True
+                elif so_z and not so_m and not so_p:
+                    so_m, so_z, so_p = m, z, p
+                elif z and not m and not p:
+                    so_z = so_z and z
+                else:
+                    so_z = so_z and z
+                    so_p = p
+                    so_m = m
+            
+            for s, i in self.p_dependencies[variable]:
+                sign = self.p_constraint(s, variable, i, values)
+                stat |= sign == 0
+                incr |= sign > 0
+                decr |= sign < 0
+            
+            use_second_order = False
+            if incr and decr:
+                if so_m or so_z or so_p:
+                    possibilities = set()
+                    if so_m:
+                        possibilities.add(-1)
+                    if so_z:
+                        possibilities.add(0)
+                    if so_p:
+                        possibilities.add(1)
+                    
+                    if values[variable].delta in possibilities:
+                        possibilities.add(0)
+                    use_second_order = True
+                else:
+                    possibilities = {-1, 0, 1}
+            elif not incr and not decr:
+                if stat:
+                    possibilities = {0}
+                else:
+                    possibilities = {values[variable].delta}
+            elif incr:
+                possibilities.add(1)
+            elif decr:
+                possibilities.add(-1)
+                
+            print('\tpossibilities' + ('(USE 2nd ORDER)' if use_second_order else '') + ' = ' + str(possibilities))
+            
+            if use_second_order:
+                for p in possibilities:
+                    if _d[var_idx] + p in {-1, 0, 1}:
+                        _d[var_idx] += p
+                        branches_rec(current+1, _d)
+                        _d[var_idx] -= p
+            else:
+                for p in possibilities:
+                    if math.fabs(deltas[var_idx] - p) <=1:
+                        _d[var_idx] = p
+                        branches_rec(current+1, _d)
+                        _d[var_idx] = values[variable].delta
+        
+        branches_rec(0, d)
+        
+        valid = False
+        for _d, dp in paths_dict[id]:
+            if not dp.any():
+                valid = True
+                children = paths_dict[id]
+                paths_dict[id] = [(_d, dp)]
+        
+        if valid:
+            node = self.build_envisioning(v, d, graph, paths_dict, input)
+            
+            for _d, dp in children:
+                if dp.any():
+                    child_node = self.build_envisioning(v, _d, graph, paths_dict, input)
+                    label = '\n'.join(
+                        ['d' + self.variables[i].name + ' += ' + str(dp[i]) for i in range(len(self.variables)) if dp[i] != 0]
+                    )
+                    graph.add_edge(node,
+                                   child_node,
+                                   label = label
+                                   )
+            
+        else:
+            for _d, dp in paths_dict[id]:
+                self.build_envisioning(v, _d, graph, paths_dict, input)
+
+        return paths_dict[id]
+        
+    def build_envisioning(self, v, d, graph, paths_dict, input=None):
+        values = self.buildValuesDict(v, d)
+        
+        current_node = self.to_string_dict(values)
+        
+        if graph.has_node(current_node):
+            return current_node
+        
+        print('building')
+        print(current_node)
+        
+        graph.add_node(current_node, color='red', style = 'filled, bold')
+        
+        _d = np.array(d, copy=True, dtype=int)
+        
+        def perform_step(s, _d, label):
+            print('STEP: ' + ''.join([str(i) for i in list(s) + list(_d)]))
+            
+            ds = s -v
+            label += '\n'.join(
+                [self.variables[i].name + ' += ' + str(ds[i]) for i in range(len(self.variables)) if ds[i] != 0]
+            )
+            label += '\n'
+            nodes = self.branches(s, _d, graph, paths_dict, input)
+            for n, dp in nodes:
+                l = '\n'.join(
+                    ['d' + self.variables[i].name + ' += ' + str(dp[i]) for i in range(len(self.variables)) if dp[i] != 0]
+                )
+                graph.add_edge(current_node, self.to_string(s, n), label= label + '\n\n' + l)
+
+        steps = self.timeStep(v, _d)
+        
+        stationary = False
+        for s in steps:
+            if not (v - s).any():
+                stationary = True
+        
+        if input is None or not stationary:
+            for s in steps:
+                perform_step(s, _d, 'TimeStep\n')
+        else:
+            input_idx = self.getVariable(input).index
+            for c in {-1, 0, 1}:
+                if c + _d[input_idx] in {-1, 0, 1}:
+                    
+                    _d[input_idx] += c
+                    
+                    for s in steps:
+                        perform_step(s, _d, 'TimeStep\n' + ('change d' + input + ' += ' + str(c) +'\n') if c!= 0 else '')
+                    
+                    _d[input_idx] -= c
+        
+        return current_node

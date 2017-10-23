@@ -75,7 +75,6 @@ def traceEdge(state_graph,edge,from_id,out):
 def traceNode(state_graph,node,out):
     attr=node.attr
     current_id=node.attr["id"]
-    print(current_id)
     out.write("STATE "+current_id+"\n")
     out.write(node+"\n")
     
@@ -154,3 +153,4 @@ def trace(state_graph):
         traceNode(state_graph,i,out)
         
     out.close()
+    print("Trace succesfully generated and saved as trace.txt")

@@ -1,0 +1,589 @@
+STATE 0
+I(0, 0)
+V(0, 0)
+O(0, 0)
+	I:	There is no water flowing in and I am not touching the tap
+	V:	There is no water in the tab and the volume of water is not changing
+	O:	There is no water flowing out and the outflow is not changing
+
+Transitions starting from State 0:
+
+	 (0 => 0)
+		If we let time pass, we can stay in this State with the same situation:
+			I(0, 0)
+			V(0, 0)
+			O(0, 0)
+
+	 (0 => 1)
+		If we start opening the tap, then we move to State 1:
+			I(0, +)
+			V(0, 0)
+			O(0, 0)
+
+_________________________________________________________________
+
+
+STATE 1
+I(0, +)
+V(0, 0)
+O(0, 0)
+	I:	There is no water flowing in and I am opening the tap
+	V:	There is no water in the tab and the volume of water is not changing
+	O:	There is no water flowing out and the outflow is not changing
+
+Transitions starting from State 1:
+
+	 (1 => 2)
+		If the water volume reaches zero and the outflow is null, the water starts flowing in, the volume and the outflow start increasing, then we move to State 2:
+			I(+, +)
+			V(0, +)
+			O(0, +)
+
+_________________________________________________________________
+
+
+STATE 2
+I(+, +)
+V(0, +)
+O(0, +)
+	I:	The water is flowing in and I am opening the tap
+	V:	There is no water in the tab and the volume of water is increasing
+	O:	There is no water flowing out and the outflow is increasing
+
+Transitions starting from State 2:
+
+	 (2 => 3)
+		If we let time pass, the water starts flowing into the bathtub, then we move to State 3:
+			I(+, +)
+			V(+, +)
+			O(+, +)
+
+_________________________________________________________________
+
+
+STATE 3
+I(+, +)
+V(+, +)
+O(+, +)
+	I:	The water is flowing in and I am opening the tap
+	V:	There is water in the bathtub and the volume of water is increasing
+	O:	There is water flowing out from the sink and the outflow is increasing
+
+Transitions starting from State 3:
+
+	 (3 => 3)
+		If we let time pass, we can stay in this State with the same situation:
+			I(+, +)
+			V(+, +)
+			O(+, +)
+
+	 (3 => 4)
+		If the water volume reaches the bathtub capacity and the outflow is maximum, the volume and the outflow stop increasing, then we move to State 4:
+			I(+, +)
+			V(max, 0)
+			O(max, 0)
+
+	 (3 => 5)
+		If the water volume reaches the bathtub capacity and the outflow is maximum, the volume and the outflow stop increasing, then we move to State 5:
+			I(+, 0)
+			V(max, 0)
+			O(max, 0)
+
+	 (3 => 15)
+		If we let time pass, the volume and the outflow stop increasing, then we move to State 15:
+			I(+, +)
+			V(+, 0)
+			O(+, 0)
+
+	 (3 => 17)
+		If we stop turning on the tap, then we move to State 17:
+			I(+, 0)
+			V(+, +)
+			O(+, +)
+
+_________________________________________________________________
+
+
+STATE 4
+I(+, +)
+V(max, 0)
+O(max, 0)
+	I:	The water is flowing in and I am opening the tap
+	V:	The bathtub is full and the volume of water is not changing
+	O:	The flow of the sink is maximum the outflow is not changing
+
+Transitions starting from State 4:
+
+	 (4 => 4)
+		If we let time pass, we can stay in this State with the same situation:
+			I(+, +)
+			V(max, 0)
+			O(max, 0)
+
+	 (4 => 5)
+		If we stop turning on the tap, then we move to State 5:
+			I(+, 0)
+			V(max, 0)
+			O(max, 0)
+
+_________________________________________________________________
+
+
+STATE 5
+I(+, 0)
+V(max, 0)
+O(max, 0)
+	I:	The water is flowing in and I am not touching the tap
+	V:	The bathtub is full and the volume of water is not changing
+	O:	The flow of the sink is maximum the outflow is not changing
+
+Transitions starting from State 5:
+
+	 (5 => 4)
+		If we start opening the tap, then we move to State 4:
+			I(+, +)
+			V(max, 0)
+			O(max, 0)
+
+	 (5 => 5)
+		If we let time pass, we can stay in this State with the same situation:
+			I(+, 0)
+			V(max, 0)
+			O(max, 0)
+
+	 (5 => 6)
+		If we start closing the tap, then we move to State 6:
+			I(+, -)
+			V(max, 0)
+			O(max, 0)
+
+_________________________________________________________________
+
+
+STATE 15
+I(+, +)
+V(+, 0)
+O(+, 0)
+	I:	The water is flowing in and I am opening the tap
+	V:	There is water in the bathtub and the volume of water is not changing
+	O:	There is water flowing out from the sink and the outflow is not changing
+
+Transitions starting from State 15:
+
+	 (15 => 3)
+		If we let time pass, the volume and the outflow start increasing, then we move to State 3:
+			I(+, +)
+			V(+, +)
+			O(+, +)
+
+	 (15 => 14)
+		If we stop turning on the tap, then we move to State 14:
+			I(+, 0)
+			V(+, 0)
+			O(+, 0)
+
+_________________________________________________________________
+
+
+STATE 17
+I(+, 0)
+V(+, +)
+O(+, +)
+	I:	The water is flowing in and I am not touching the tap
+	V:	There is water in the bathtub and the volume of water is increasing
+	O:	There is water flowing out from the sink and the outflow is increasing
+
+Transitions starting from State 17:
+
+	 (17 => 3)
+		If we start opening the tap, then we move to State 3:
+			I(+, +)
+			V(+, +)
+			O(+, +)
+
+	 (17 => 4)
+		If the water volume reaches the bathtub capacity and the outflow is maximum, the volume and the outflow stop increasing, then we move to State 4:
+			I(+, +)
+			V(max, 0)
+			O(max, 0)
+
+	 (17 => 5)
+		If the water volume reaches the bathtub capacity and the outflow is maximum, the volume and the outflow stop increasing, then we move to State 5:
+			I(+, 0)
+			V(max, 0)
+			O(max, 0)
+
+	 (17 => 17)
+		If we let time pass, we can stay in this State with the same situation:
+			I(+, 0)
+			V(+, +)
+			O(+, +)
+
+	 (17 => 6)
+		If the water volume reaches the bathtub capacity and the outflow is maximum, the volume and the outflow stop increasing, then we move to State 6:
+			I(+, -)
+			V(max, 0)
+			O(max, 0)
+
+	 (17 => 14)
+		If we let time pass, the volume and the outflow stop increasing, then we move to State 14:
+			I(+, 0)
+			V(+, 0)
+			O(+, 0)
+
+	 (17 => 18)
+		If we start closing the tap, then we move to State 18:
+			I(+, -)
+			V(+, +)
+			O(+, +)
+
+_________________________________________________________________
+
+
+STATE 6
+I(+, -)
+V(max, 0)
+O(max, 0)
+	I:	The water is flowing in and I am closing the tap
+	V:	The bathtub is full and the volume of water is not changing
+	O:	The flow of the sink is maximum the outflow is not changing
+
+Transitions starting from State 6:
+
+	 (6 => 5)
+		If we stop turning off the tap, then we move to State 5:
+			I(+, 0)
+			V(max, 0)
+			O(max, 0)
+
+	 (6 => 6)
+		If we let time pass, we can stay in this State with the same situation:
+			I(+, -)
+			V(max, 0)
+			O(max, 0)
+
+	 (6 => 7)
+		If our Inflow reaches zero , the tap is now closed, the volume and the outflow start decreasing, then we move to State 7:
+			I(0, 0)
+			V(max, -)
+			O(max, -)
+
+	 (6 => 16)
+		If the water volume reaches the bathtub capacity and the outflow is maximum, the volume and the outflow start decreasing, then we move to State 16:
+			I(+, -)
+			V(max, -)
+			O(max, -)
+
+_________________________________________________________________
+
+
+STATE 14
+I(+, 0)
+V(+, 0)
+O(+, 0)
+	I:	The water is flowing in and I am not touching the tap
+	V:	There is water in the bathtub and the volume of water is not changing
+	O:	There is water flowing out from the sink and the outflow is not changing
+
+Transitions starting from State 14:
+
+	 (14 => 3)
+		If we start opening the tap, the volume and the outflow start increasing, then we move to State 3:
+			I(+, +)
+			V(+, +)
+			O(+, +)
+
+	 (14 => 14)
+		If we let time pass, we can stay in this State with the same situation:
+			I(+, 0)
+			V(+, 0)
+			O(+, 0)
+
+	 (14 => 12)
+		If we start closing the tap, the volume and the outflow start decreasing, then we move to State 12:
+			I(+, -)
+			V(+, -)
+			O(+, -)
+
+_________________________________________________________________
+
+
+STATE 18
+I(+, -)
+V(+, +)
+O(+, +)
+	I:	The water is flowing in and I am closing the tap
+	V:	There is water in the bathtub and the volume of water is increasing
+	O:	There is water flowing out from the sink and the outflow is increasing
+
+Transitions starting from State 18:
+
+	 (18 => 5)
+		If the water volume reaches the bathtub capacity and the outflow is maximum, the volume and the outflow stop increasing, then we move to State 5:
+			I(+, 0)
+			V(max, 0)
+			O(max, 0)
+
+	 (18 => 17)
+		If we stop turning off the tap, then we move to State 17:
+			I(+, 0)
+			V(+, +)
+			O(+, +)
+
+	 (18 => 6)
+		If the water volume reaches the bathtub capacity and the outflow is maximum, the volume and the outflow stop increasing, then we move to State 6:
+			I(+, -)
+			V(max, 0)
+			O(max, 0)
+
+	 (18 => 18)
+		If we let time pass, we can stay in this State with the same situation:
+			I(+, -)
+			V(+, +)
+			O(+, +)
+
+	 (18 => 13)
+		If we let time pass, the volume and the outflow stop increasing, then we move to State 13:
+			I(+, -)
+			V(+, 0)
+			O(+, 0)
+
+_________________________________________________________________
+
+
+STATE 7
+I(0, 0)
+V(max, -)
+O(max, -)
+	I:	There is no water flowing in and I am not touching the tap
+	V:	The bathtub is full and the volume of water is decreasing
+	O:	The flow of the sink is maximum the outflow is decreasing
+
+Transitions starting from State 7:
+
+	 (7 => 8)
+		If we let time pass, the water is nomore overflowing, then we move to State 8:
+			I(0, 0)
+			V(+, -)
+			O(+, -)
+
+_________________________________________________________________
+
+
+STATE 16
+I(+, -)
+V(max, -)
+O(max, -)
+	I:	The water is flowing in and I am closing the tap
+	V:	The bathtub is full and the volume of water is decreasing
+	O:	The flow of the sink is maximum the outflow is decreasing
+
+Transitions starting from State 16:
+
+	 (16 => 12)
+		If we let time pass, the water is nomore overflowing, then we move to State 12:
+			I(+, -)
+			V(+, -)
+			O(+, -)
+
+_________________________________________________________________
+
+
+STATE 8
+I(0, 0)
+V(+, -)
+O(+, -)
+	I:	There is no water flowing in and I am not touching the tap
+	V:	There is water in the bathtub and the volume of water is decreasing
+	O:	There is water flowing out from the sink and the outflow is decreasing
+
+Transitions starting from State 8:
+
+	 (8 => 0)
+		If the water volume reaches zero and the outflow is null, the volume and the outflow stop decreasing, then we move to State 0:
+			I(0, 0)
+			V(0, 0)
+			O(0, 0)
+
+	 (8 => 1)
+		If the water volume reaches zero and the outflow is null, the volume and the outflow stop decreasing, then we move to State 1:
+			I(0, +)
+			V(0, 0)
+			O(0, 0)
+
+	 (8 => 8)
+		If we let time pass, we can stay in this State with the same situation:
+			I(0, 0)
+			V(+, -)
+			O(+, -)
+
+	 (8 => 9)
+		If we start opening the tap, then we move to State 9:
+			I(0, +)
+			V(+, -)
+			O(+, -)
+
+_________________________________________________________________
+
+
+STATE 12
+I(+, -)
+V(+, -)
+O(+, -)
+	I:	The water is flowing in and I am closing the tap
+	V:	There is water in the bathtub and the volume of water is decreasing
+	O:	There is water flowing out from the sink and the outflow is decreasing
+
+Transitions starting from State 12:
+
+	 (12 => 0)
+		If our Inflow reaches zero , the tap is now closed, the volume and the outflow stop decreasing, then we move to State 0:
+			I(0, 0)
+			V(0, 0)
+			O(0, 0)
+
+	 (12 => 8)
+		If our Inflow reaches zero , the tap is now closed, then we move to State 8:
+			I(0, 0)
+			V(+, -)
+			O(+, -)
+
+	 (12 => 12)
+		If we let time pass, we can stay in this State with the same situation:
+			I(+, -)
+			V(+, -)
+			O(+, -)
+
+	 (12 => 11)
+		If we stop turning off the tap, then we move to State 11:
+			I(+, 0)
+			V(+, -)
+			O(+, -)
+
+	 (12 => 13)
+		If we let time pass, the volume and the outflow stop decreasing, then we move to State 13:
+			I(+, -)
+			V(+, 0)
+			O(+, 0)
+
+_________________________________________________________________
+
+
+STATE 9
+I(0, +)
+V(+, -)
+O(+, -)
+	I:	There is no water flowing in and I am opening the tap
+	V:	There is water in the bathtub and the volume of water is decreasing
+	O:	There is water flowing out from the sink and the outflow is decreasing
+
+Transitions starting from State 9:
+
+	 (9 => 10)
+		If we let time pass, the water starts flowing in, then we move to State 10:
+			I(+, +)
+			V(+, -)
+			O(+, -)
+
+_________________________________________________________________
+
+
+STATE 10
+I(+, +)
+V(+, -)
+O(+, -)
+	I:	The water is flowing in and I am opening the tap
+	V:	There is water in the bathtub and the volume of water is decreasing
+	O:	There is water flowing out from the sink and the outflow is decreasing
+
+Transitions starting from State 10:
+
+	 (10 => 15)
+		If we let time pass, the volume and the outflow stop decreasing, then we move to State 15:
+			I(+, +)
+			V(+, 0)
+			O(+, 0)
+
+	 (10 => 10)
+		If we let time pass, we can stay in this State with the same situation:
+			I(+, +)
+			V(+, -)
+			O(+, -)
+
+	 (10 => 11)
+		If we stop turning on the tap, then we move to State 11:
+			I(+, 0)
+			V(+, -)
+			O(+, -)
+
+_________________________________________________________________
+
+
+STATE 11
+I(+, 0)
+V(+, -)
+O(+, -)
+	I:	The water is flowing in and I am not touching the tap
+	V:	There is water in the bathtub and the volume of water is decreasing
+	O:	There is water flowing out from the sink and the outflow is decreasing
+
+Transitions starting from State 11:
+
+	 (11 => 14)
+		If we let time pass, the volume and the outflow stop decreasing, then we move to State 14:
+			I(+, 0)
+			V(+, 0)
+			O(+, 0)
+
+	 (11 => 12)
+		If we start closing the tap, then we move to State 12:
+			I(+, -)
+			V(+, -)
+			O(+, -)
+
+	 (11 => 10)
+		If we start opening the tap, then we move to State 10:
+			I(+, +)
+			V(+, -)
+			O(+, -)
+
+	 (11 => 11)
+		If we let time pass, we can stay in this State with the same situation:
+			I(+, 0)
+			V(+, -)
+			O(+, -)
+
+_________________________________________________________________
+
+
+STATE 13
+I(+, -)
+V(+, 0)
+O(+, 0)
+	I:	The water is flowing in and I am closing the tap
+	V:	There is water in the bathtub and the volume of water is not changing
+	O:	There is water flowing out from the sink and the outflow is not changing
+
+Transitions starting from State 13:
+
+	 (13 => 14)
+		If we stop turning off the tap, then we move to State 14:
+			I(+, 0)
+			V(+, 0)
+			O(+, 0)
+
+	 (13 => 8)
+		If our Inflow reaches zero , the tap is now closed, the volume and the outflow start decreasing, then we move to State 8:
+			I(0, 0)
+			V(+, -)
+			O(+, -)
+
+	 (13 => 12)
+		If we let time pass, the volume and the outflow start decreasing, then we move to State 12:
+			I(+, -)
+			V(+, -)
+			O(+, -)
+
+_________________________________________________________________
+
+

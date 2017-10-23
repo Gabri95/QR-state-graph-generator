@@ -263,7 +263,7 @@ class Model:
         
         m = s < 0
         p = s > 0
-        z = s == 0 or values[v2].delta != 0
+        z = s == 0 or values[v2].delta != 0 or values[v2].val == values[v2].variable.getMaxVal()
 
         return sign, m, z, p
     
@@ -506,7 +506,6 @@ class Model:
             input_idx = self.getVariable(input).index
             for c in {-1, 0, 1}:
                 if c + _d[input_idx] in {-1, 0, 1}:
-                    
                     _d[input_idx] += c
                     
                     for s in steps:

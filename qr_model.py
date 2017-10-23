@@ -473,6 +473,8 @@ class Model:
         print(current_node)
         
         graph.add_node(current_node, color='red', style = 'filled, bold')
+
+        graph.get_node(current_node).attr.update({k: v for k, v in zip(self.variables_names_to_strings(), np.concatenate((v, d)))})
         
         _d = np.array(d, copy=True, dtype=int)
         

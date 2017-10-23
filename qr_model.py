@@ -353,7 +353,6 @@ class Model:
                     print('VALID')
                     print('\tchanges ' + str(_d - d))
                     paths_dict[id].append((_d, _d - d))
-                    print(paths_dict[id])
                 else:
                     print('NOT VALID')
                 return
@@ -490,7 +489,7 @@ class Model:
                 l = '\n'.join(
                     ['d' + self.variables[i].name + ' += ' + str(dp[i]) for i in range(len(self.variables)) if dp[i] != 0]
                 )
-                graph.add_edge(current_node, self.to_string(s, n), label= label + '\n\n' + l)
+                graph.add_edge(current_node, self.to_string(s, n), label= label + '\n\n' + l, timestep=True)
 
         steps = self.timeStep(v, _d)
         
@@ -509,7 +508,7 @@ class Model:
                     _d[input_idx] += c
                     
                     for s in steps:
-                        perform_step(s, _d, 'TimeStep\n' + ('change d' + input + ' += ' + str(c) +'\n') if c!= 0 else '')
+                        perform_step(s, _d, 'TimeStep\n' + ('change d' + input + ' += ' + str(c) +'\n' if c!= 0 else ''))
                     
                     _d[input_idx] -= c
         

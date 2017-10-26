@@ -3,7 +3,7 @@ I(0, 0)
 V(0, 0)
 O(0, 0)
 	I:	There is no water flowing in and I am not touching the tap
-	V:	There is no water in the tab and the volume of water is not changing
+	V:	There is no water in the bathtub and the volume of water is not changing
 	O:	There is no water flowing out and the outflow is not changing
 
 Transitions starting from State 0:
@@ -28,13 +28,13 @@ I(0, +)
 V(0, 0)
 O(0, 0)
 	I:	There is no water flowing in and I am opening the tap
-	V:	There is no water in the tab and the volume of water is not changing
+	V:	There is no water in the bathtub and the volume of water is not changing
 	O:	There is no water flowing out and the outflow is not changing
 
 Transitions starting from State 1:
 
 	 (1 => 2)
-		If the water volume reaches zero and the outflow is null, the water starts flowing in, the volume and the outflow start increasing, then we move to State 2:
+		If we let time pass, the water starts flowing in, the volume and the outflow start increasing, then we move to State 2:
 			I(+, +)
 			V(0, +)
 			O(0, +)
@@ -47,7 +47,7 @@ I(+, +)
 V(0, +)
 O(0, +)
 	I:	The water is flowing in and I am opening the tap
-	V:	There is no water in the tab and the volume of water is increasing
+	V:	There is no water in the bathtub and the volume of water is increasing
 	O:	There is no water flowing out and the outflow is increasing
 
 Transitions starting from State 2:
@@ -78,13 +78,13 @@ Transitions starting from State 3:
 			O(+, +)
 
 	 (3 => 4)
-		If the water volume reaches the bathtub capacity and the outflow is maximum, the volume and the outflow stop increasing, then we move to State 4:
+		If the water volume reaches the bathtub capacity and the outflow reaches the maximum, the volume and the outflow stop increasing, then we move to State 4:
 			I(+, +)
 			V(max, 0)
 			O(max, 0)
 
 	 (3 => 5)
-		If the water volume reaches the bathtub capacity and the outflow is maximum, the volume and the outflow stop increasing, then we move to State 5:
+		If the water volume reaches the bathtub capacity and the outflow reaches the maximum, we close the tap, the volume and the outflow stop increasing, then we move to State 5:
 			I(+, 0)
 			V(max, 0)
 			O(max, 0)
@@ -110,7 +110,7 @@ V(max, 0)
 O(max, 0)
 	I:	The water is flowing in and I am opening the tap
 	V:	The bathtub is full and the volume of water is not changing
-	O:	The flow of the sink is maximum the outflow is not changing
+	O:	The flow of the sink is maximum and the outflow is not changing
 
 Transitions starting from State 4:
 
@@ -135,7 +135,7 @@ V(max, 0)
 O(max, 0)
 	I:	The water is flowing in and I am not touching the tap
 	V:	The bathtub is full and the volume of water is not changing
-	O:	The flow of the sink is maximum the outflow is not changing
+	O:	The flow of the sink is maximum and the outflow is not changing
 
 Transitions starting from State 5:
 
@@ -202,13 +202,13 @@ Transitions starting from State 17:
 			O(+, +)
 
 	 (17 => 4)
-		If the water volume reaches the bathtub capacity and the outflow is maximum, the volume and the outflow stop increasing, then we move to State 4:
+		If the water volume reaches the bathtub capacity and the outflow reaches the maximum, the volume and the outflow stop increasing, then we move to State 4:
 			I(+, +)
 			V(max, 0)
 			O(max, 0)
 
 	 (17 => 5)
-		If the water volume reaches the bathtub capacity and the outflow is maximum, the volume and the outflow stop increasing, then we move to State 5:
+		If the water volume reaches the bathtub capacity and the outflow reaches the maximum, the volume and the outflow stop increasing, then we move to State 5:
 			I(+, 0)
 			V(max, 0)
 			O(max, 0)
@@ -220,7 +220,7 @@ Transitions starting from State 17:
 			O(+, +)
 
 	 (17 => 6)
-		If the water volume reaches the bathtub capacity and the outflow is maximum, the volume and the outflow stop increasing, then we move to State 6:
+		If the water volume reaches the bathtub capacity and the outflow reaches the maximum, we close the tap, the volume and the outflow stop increasing, then we move to State 6:
 			I(+, -)
 			V(max, 0)
 			O(max, 0)
@@ -246,7 +246,7 @@ V(max, 0)
 O(max, 0)
 	I:	The water is flowing in and I am closing the tap
 	V:	The bathtub is full and the volume of water is not changing
-	O:	The flow of the sink is maximum the outflow is not changing
+	O:	The flow of the sink is maximum and the outflow is not changing
 
 Transitions starting from State 6:
 
@@ -269,7 +269,7 @@ Transitions starting from State 6:
 			O(max, -)
 
 	 (6 => 16)
-		If the water volume reaches the bathtub capacity and the outflow is maximum, the volume and the outflow start decreasing, then we move to State 16:
+		If we let time pass, the volume and the outflow start decreasing, then we move to State 16:
 			I(+, -)
 			V(max, -)
 			O(max, -)
@@ -319,7 +319,7 @@ O(+, +)
 Transitions starting from State 18:
 
 	 (18 => 5)
-		If the water volume reaches the bathtub capacity and the outflow is maximum, the volume and the outflow stop increasing, then we move to State 5:
+		If the water volume reaches the bathtub capacity and the outflow reaches the maximum, the volume and the outflow stop increasing, then we move to State 5:
 			I(+, 0)
 			V(max, 0)
 			O(max, 0)
@@ -331,7 +331,7 @@ Transitions starting from State 18:
 			O(+, +)
 
 	 (18 => 6)
-		If the water volume reaches the bathtub capacity and the outflow is maximum, the volume and the outflow stop increasing, then we move to State 6:
+		If the water volume reaches the bathtub capacity and the outflow reaches the maximum, the volume and the outflow stop increasing, then we move to State 6:
 			I(+, -)
 			V(max, 0)
 			O(max, 0)
@@ -357,7 +357,7 @@ V(max, -)
 O(max, -)
 	I:	There is no water flowing in and I am not touching the tap
 	V:	The bathtub is full and the volume of water is decreasing
-	O:	The flow of the sink is maximum the outflow is decreasing
+	O:	The flow of the sink is maximum and the outflow is decreasing
 
 Transitions starting from State 7:
 
@@ -376,7 +376,7 @@ V(max, -)
 O(max, -)
 	I:	The water is flowing in and I am closing the tap
 	V:	The bathtub is full and the volume of water is decreasing
-	O:	The flow of the sink is maximum the outflow is decreasing
+	O:	The flow of the sink is maximum and the outflow is decreasing
 
 Transitions starting from State 16:
 

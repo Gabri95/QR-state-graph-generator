@@ -7,6 +7,7 @@ def traceEdge(state_graph,edge,from_id,out):
     to_id=state_graph.get_node(edge[1]).attr["id"]
     label=edge.attr["label"]
     nextS=state_graph.get_node(edge[1])
+    previousS=state_graph.get_node(edge[0])
     out.write("\t ("+from_id+" => "+to_id+")\n")
     
     desc=""
@@ -20,10 +21,12 @@ def traceEdge(state_graph,edge,from_id,out):
     
     if  (state_graph.get_node(edge[0]).attr["vI"]!="0") and (I=="0"):
         desc+="If our Inflow reaches zero "
-    elif("dV += 1" in label) and (V=="0"):
+    elif("dV += 1" in label) and (V=="0") and previousS.attr["vV"]=="1":
         desc+="If the water volume reaches zero and the outflow is null"
-    elif("dV += -1" in label) and (V=="2"):
-        desc+="If the water volume reaches the bathtub capacity and the outflow is maximum"
+    elif("dV += -1" in label) and (V=="2") and previousS.attr["vV"]=="1":
+        desc+="If the water volume reaches the bathtub capacity and the outflow reaches the maximum"
+        if "dI += -1" in label:
+            desc+=", we close the tap"
     elif "change" in label:
         desc+="If we "
         if(dI=="0"):
@@ -107,7 +110,7 @@ def traceNode(state_graph,node,out):
     elif(V=="1"):
         out.write("There is water in the bathtub and ")
     elif(V=="0"):
-        out.write("There is no water in the tab and ")
+        out.write("There is no water in the bathtub and ")
         
     if(dV=="1"):
         out.write("the volume of water is increasing")
@@ -120,7 +123,7 @@ def traceNode(state_graph,node,out):
     
     out.write("\tO:\t")
     if(O=="2"):
-        out.write("The flow of the sink is maximum ")
+        out.write("The flow of the sink is maximum and ")
     elif(O=="1"):
         out.write("There is water flowing out from the sink and ")
     elif(O=="0"):
@@ -143,11 +146,7 @@ def traceNode(state_graph,node,out):
     
 
 def trace(state_graph):
-    try:
-        os.remove("./trace.txt")
-    except OSError:
-        pass
-    out = open("./trace.txt","a")
+    out = open("./trace.txt","w")
 
     for i in state_graph.nodes():
         traceNode(state_graph,i,out)

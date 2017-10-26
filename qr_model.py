@@ -315,7 +315,7 @@ class Model:
             deltas.append('d' + v.name)
         return vals + deltas
 
-    def envisioning(self, v, d, input=None, graph=None):
+    def reasoner(self, v, d, input=None, graph=None):
         if graph is None:
             graph = pgv.AGraph(directed=True, fixedsize=True)
         
@@ -442,11 +442,11 @@ class Model:
                 paths_dict[id] = [(_d, dp)]
         
         if valid:
-            node = self.build_envisioning(v, d, graph, paths_dict, input)
+            node = self.build_node(v, d, graph, paths_dict, input)
             
             for _d, dp in children:
                 if dp.any():
-                    child_node = self.build_envisioning(v, _d, graph, paths_dict, input)
+                    child_node = self.build_node(v, _d, graph, paths_dict, input)
                     label = '\n'.join(
                         ['d' + self.variables[i].name + ' += ' + str(dp[i]) for i in range(len(self.variables)) if dp[i] != 0]
                     )
@@ -457,11 +457,11 @@ class Model:
             
         else:
             for _d, dp in paths_dict[id]:
-                self.build_envisioning(v, _d, graph, paths_dict, input)
+                self.build_node(v, _d, graph, paths_dict, input)
 
         return paths_dict[id]
         
-    def build_envisioning(self, v, d, graph, paths_dict, input=None):
+    def build_node(self, v, d, graph, paths_dict, input=None):
         values = self.buildValuesDict(v, d)
         
         current_node = self.to_string_dict(values)
@@ -491,7 +491,7 @@ class Model:
                 l = '\n'.join(
                     ['d' + self.variables[i].name + ' += ' + str(dp[i]) for i in range(len(self.variables)) if dp[i] != 0]
                 )
-                graph.add_edge(current_node, self.to_string(s, n), label= label + '\n\n' + l, timestep=True)
+                graph.add_edge(current_node, self.to_string(s, n), label=label+'\n\n'+l, timestep=True)
 
         steps = self.timeStep(v, _d)
         
@@ -510,7 +510,7 @@ class Model:
                     _d[input_idx] += c
                     
                     for s in steps:
-                        perform_step(s, _d, 'TimeStep\n' + ('change d' + input + ' += ' + str(c) +'\n' if c!= 0 else ''))
+                        perform_step(s, _d, 'TimeStep\n' + ('change d' + input + ' += ' + str(c) + '\n' if c!= 0 else ''))
                     
                     _d[input_idx] -= c
         
